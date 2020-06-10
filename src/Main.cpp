@@ -5,6 +5,7 @@
 #include "GLEW/glew.h"
 #include "GLFW/glfw3.h"
 #include "ShaderProgram.h"
+#include "glm/glm.hpp"
 
 const char* APP_TITLE = "Modern OpenGL";
 const int WINDOW_WIDTH = 800;
@@ -26,11 +27,10 @@ int main()
 	}
 
 	GLfloat vertices[] = {
-		// position         // color
-		-0.5f,  0.5f, 0.0f, 1.0f, 0.0f, 0.0f,
-		 0.5f,  0.5f, 0.0f, 0.0f, 1.0f, 0.0f,
-	     0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f,	   
-	    -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f
+		-0.5f,  0.5f, 0.0f, 
+		 0.5f,  0.5f, 0.0f, 
+	     0.5f, -0.5f, 0.0f, 
+	    -0.5f, -0.5f, 0.0f, 
 	};
 
 	GLuint indices[] = {
@@ -48,13 +48,9 @@ int main()
 	glBindVertexArray(vao);
 
 	//position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 6, NULL);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 	glEnableVertexAttribArray(0);
-
-	//color
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(GLfloat) * 6, (GLvoid*)(sizeof(GLfloat) * 3));
-	glEnableVertexAttribArray(1);
-
+		
 	glGenBuffers(1, &ibo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
@@ -71,6 +67,15 @@ int main()
 		glClear(GL_COLOR_BUFFER_BIT);
 
 		shaderProgram.Use();
+
+		GLfloat time = glfwGetTime();
+		GLfloat blueColor = (sin(time) / 2) + 0.5f;
+		shaderProgram.SetUniform("vert_color", glm::vec4(0.0f, 0.0f, blueColor, 1.0f));
+
+		glm::vec2 pos;
+		pos.x = sin(time) / 2;
+		pos.y = cos(time) / 2;
+		shaderProgram.SetUniform("pos_offset", pos);
 
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
