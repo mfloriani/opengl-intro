@@ -132,3 +132,8 @@ GLint ShaderProgram::GetUniformLocation(const GLchar* name)
 	}
 	return m_uniformLocations[name];
 }
+
+GLuint ShaderProgram::GetProgram() const
+{
+	return m_handle;
+}

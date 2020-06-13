@@ -21,9 +21,12 @@ public:
 
 	bool LoadShaders(const char* vsFilename, const char* fsFilename);
 	void Use();
+	
 	void SetUniform(const GLchar* name, const glm::vec2& v);
 	void SetUniform(const GLchar* name, const glm::vec3& v);
 	void SetUniform(const GLchar* name, const glm::vec4& v);
+	
+	GLuint GetProgram() const;
 
 private:
 	std::string FileToString(const std::string& filename);

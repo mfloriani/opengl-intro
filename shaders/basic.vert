@@ -1,10 +1,12 @@
 #version 330 core
 
 layout (location = 0) in vec3 pos;
-layout (location = 1) in vec3 color;
-uniform vec2 pos_offset;
+layout (location = 1) in vec2 tex_coord;
+
+out vec2 TexCoord;
 
 void main()
 {
-	gl_Position = vec4(pos.x + pos_offset.x, pos.y + pos_offset.y, pos.z, 1.0);
+	gl_Position = vec4(pos.x, pos.y, pos.z, 1.0);
+	TexCoord = tex_coord;
 }

@@ -6,6 +6,7 @@
 #include "GLFW/glfw3.h"
 #include "ShaderProgram.h"
 #include "glm/glm.hpp"
+#include "Texture2D.h"
 
 const char* APP_TITLE = "Modern OpenGL";
 const int WINDOW_WIDTH = 800;
@@ -27,10 +28,11 @@ int main()
 	}
 
 	GLfloat vertices[] = {
-		-0.5f,  0.5f, 0.0f, 
-		 0.5f,  0.5f, 0.0f, 
-	     0.5f, -0.5f, 0.0f, 
-	    -0.5f, -0.5f, 0.0f, 
+		// position         //tex coords
+		-0.5f,  0.5f, 0.0f, 0.0f, 1.0f,
+		 0.5f,  0.5f, 0.0f, 1.0f, 1.0f,
+	     0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
+	    -0.5f, -0.5f, 0.0f, 0.0f, 0.0f
 	};
 
 	GLuint indices[] = {
@@ -48,8 +50,12 @@ int main()
 	glBindVertexArray(vao);
 
 	//position
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), NULL);
 	glEnableVertexAttribArray(0);
+
+	//tex coord
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLfloat*)(3 * sizeof(GLfloat)));
+	glEnableVertexAttribArray(1);
 		
 	glGenBuffers(1, &ibo);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
@@ -57,6 +63,12 @@ int main()
 
 	ShaderProgram shaderProgram;
 	shaderProgram.LoadShaders("shaders/basic.vert", "shaders/basic.frag");
+
+	Texture2D airplaneTex;
+	airplaneTex.Load("textures/airplane.png", true);
+
+	Texture2D crateTex;
+	crateTex.Load("textures/crate.jpg", true);
 
 	while (!glfwWindowShouldClose(window))
 	{
@@ -66,16 +78,13 @@ int main()
 
 		glClear(GL_COLOR_BUFFER_BIT);
 
+		airplaneTex.Bind(0);
+		crateTex.Bind(1);
+		
+		glUniform1i(glGetUniformLocation(shaderProgram.GetProgram(), "my_texture"), 0);
+		glUniform1i(glGetUniformLocation(shaderProgram.GetProgram(), "my_texture2"), 1);
+
 		shaderProgram.Use();
-
-		GLfloat time = glfwGetTime();
-		GLfloat blueColor = (sin(time) / 2) + 0.5f;
-		shaderProgram.SetUniform("vert_color", glm::vec4(0.0f, 0.0f, blueColor, 1.0f));
-
-		glm::vec2 pos;
-		pos.x = sin(time) / 2;
-		pos.y = cos(time) / 2;
-		shaderProgram.SetUniform("pos_offset", pos);
 
 		glBindVertexArray(vao);
 		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
