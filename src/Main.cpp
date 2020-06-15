@@ -4,9 +4,10 @@
 #define GLEW_STATIC
 #include "GLEW/glew.h"
 #include "GLFW/glfw3.h"
-#include "ShaderProgram.h"
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+
+#include "ShaderProgram.h"
 #include "Texture2D.h"
 #include "Camera.h"
 
@@ -20,16 +21,16 @@ GLFWwindow* window = nullptr;
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode);
 void glfw_onFrameBufferSize(GLFWwindow* window, int width, int height);
 void glfw_onMouseMove(GLFWwindow* window, double posX, double posY);
+void glfw_onMouseScroll(GLFWwindow* window, double deltaX, double deltaY);
 
 void showFPS(GLFWwindow* window);
 bool initOpenGL();
+void Update(double elapsedTime);
 
-OrbitCamera orbitCamera;
-float yaw = 0.f;
-float pitch = 0.f;
-float radius = 10.f;
-
-const float MOUSE_SENSITIVITY = 0.25f;
+FPSCamera fpsCamera(glm::vec3(0.f, 0.f, 5.f));
+const double ZOOM_SENSITIVITY = -3.f;
+const float MOVE_SPEED = 5.f;
+const float MOUSE_SENSITIVITY = 0.1f;
 
 int main()
 {
@@ -91,7 +92,8 @@ int main()
 		   1.0f, -1.0f, -1.0f, 1.0f, 0.0f
 	};
 
-	glm::vec3 cubePos = glm::vec3(0.0f, 0.0f, -5.f);
+	glm::vec3 cubePos{ 0.f, 0.f, 0.f };
+	glm::vec3 floorPos{ 0.f, -1.f, 0.f };
 
 	GLuint vbo, vao;
 
@@ -130,6 +132,7 @@ int main()
 		double deltaTime = currentTime - lastTime;
 
 		glfwPollEvents();
+		Update(deltaTime);
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -137,15 +140,9 @@ int main()
 		
 		glm::mat4 model, view, projection;
 
-		orbitCamera.SetLookAt(cubePos);
-		orbitCamera.Rotate(yaw, pitch);
-		orbitCamera.SetRadius(radius);
-
 		model = glm::translate(model, cubePos);
-		
-		view = orbitCamera.GetViewMatrix();
-
-		projection = glm::perspective(glm::radians(45.f), (float)windowWidth / (float)windowHeight, 0.1f, 100.f);
+		view = fpsCamera.GetViewMatrix();
+		projection = glm::perspective(glm::radians(fpsCamera.GetFOV()), (float)windowWidth / (float)windowHeight, 0.1f, 100.f);
 		
 		shaderProgram.Use();
 
@@ -158,8 +155,6 @@ int main()
 
 		crateTex.Bind(0);
 
-		glm::vec3 floorPos;
-		floorPos.y = -1.f;
 		model = glm::translate(model, floorPos) * glm::scale(model, glm::vec3(10.f, 0.01f, 10.f));
 		shaderProgram.SetUniform("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -186,7 +181,7 @@ void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
 		glfwSetWindowShouldClose(window, GL_TRUE);
 	}
 
-	if (key == GLFW_KEY_W && action == GLFW_PRESS)
+	if (key == GLFW_KEY_ENTER && action == GLFW_PRESS)
 	{
 		wireframe = !wireframe;
 		if (wireframe)
@@ -270,6 +265,10 @@ bool initOpenGL()
 
 	glfwSetKeyCallback(window, glfw_onKey);
 	glfwSetCursorPosCallback(window, glfw_onMouseMove);
+	glfwSetScrollCallback(window, glfw_onMouseScroll);
+
+	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	glfwSetCursorPos(window, (windowWidth / 2.f), (windowHeight / 2.f));
 
 	glClearColor(0.23f, 0.38f, 0.47f, 1.0f);
 	glViewport(0, 0, windowWidth, windowHeight);
@@ -287,21 +286,55 @@ void glfw_onFrameBufferSize(GLFWwindow* window, int width, int height)
 
 void glfw_onMouseMove(GLFWwindow* window, double posX, double posY)
 {
-	static glm::vec2 lastMousePos = glm::vec2{ 0, 0 };
+	//static glm::vec2 lastMousePos = glm::vec2{ 0, 0 };
 
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == 1)
-	{
-		yaw -= ((float)posX - lastMousePos.x) * MOUSE_SENSITIVITY;
-		pitch += ((float)posY - lastMousePos.y) * MOUSE_SENSITIVITY;
-	}
-	
-	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == 1)
-	{
-		float dx = 0.01f * ((float)posX - lastMousePos.x);
-		float dy = 0.01f * ((float)posY - lastMousePos.y);
-		radius += dx - dy;
-	}
+	//if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == 1)
+	//{
+	//	yaw -= ((float)posX - lastMousePos.x) * MOUSE_SENSITIVITY;
+	//	pitch += ((float)posY - lastMousePos.y) * MOUSE_SENSITIVITY;
+	//}
+	//
+	//if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == 1)
+	//{
+	//	float dx = 0.01f * ((float)posX - lastMousePos.x);
+	//	float dy = 0.01f * ((float)posY - lastMousePos.y);
+	//	radius += dx - dy;
+	//}
 
-	lastMousePos.x = (float)posX;
-	lastMousePos.t = (float)posY;
+	//lastMousePos.x = (float)posX;
+	//lastMousePos.t = (float)posY;
+}
+
+void glfw_onMouseScroll(GLFWwindow* window, double deltaX, double deltaY)
+{
+	double fov = fpsCamera.GetFOV() + deltaY * ZOOM_SENSITIVITY;
+	fov = glm::clamp(fov, 1.0, 120.0);
+	fpsCamera.SetFOV((float)fov);
+}
+
+void Update(double elapsedTime)
+{
+	double mouseX, mouseY;
+
+	glfwGetCursorPos(window, &mouseX, &mouseY);
+	fpsCamera.Rotate((float)(windowWidth / 2.0 - mouseX) * MOUSE_SENSITIVITY, (float)(windowHeight / 2.0 - mouseY) * MOUSE_SENSITIVITY);
+	glfwSetCursorPos(window, windowWidth / 2.0, windowHeight / 2.0);
+
+	// Forward | Backward
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		fpsCamera.Move(MOVE_SPEED * (float)elapsedTime * fpsCamera.GetLook());
+	else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		fpsCamera.Move(MOVE_SPEED * (float)elapsedTime * -fpsCamera.GetLook());
+
+	// Strafe left | right
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		fpsCamera.Move(MOVE_SPEED * (float)elapsedTime * -fpsCamera.GetRight());
+	else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		fpsCamera.Move(MOVE_SPEED * (float)elapsedTime * fpsCamera.GetRight());
+
+	// Up | Down
+	if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
+		fpsCamera.Move(MOVE_SPEED * (float)elapsedTime * fpsCamera.GetUp());
+	else if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
+		fpsCamera.Move(MOVE_SPEED * (float)elapsedTime * -fpsCamera.GetUp());
 }
