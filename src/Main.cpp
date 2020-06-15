@@ -6,16 +6,18 @@
 #include "GLFW/glfw3.h"
 #include "ShaderProgram.h"
 #include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
 #include "Texture2D.h"
 
 const char* APP_TITLE = "Modern OpenGL";
-const int WINDOW_WIDTH = 800;
-const int WINDOW_HEIGHT = 600;
+int WINDOW_WIDTH = 1024;
+int WINDOW_HEIGHT = 768;
 bool fullscreen = false;
 bool wireframe = false;
 GLFWwindow* window = nullptr;
 
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode);
+void glfw_onFrameBufferSize(GLFWwindow* window, int width, int height);
 void showFPS(GLFWwindow* window);
 bool initOpenGL();
 
@@ -29,18 +31,59 @@ int main()
 
 	GLfloat vertices[] = {
 		// position         //tex coords
-		-0.5f,  0.5f, 0.0f, 0.0f, 1.0f,
-		 0.5f,  0.5f, 0.0f, 1.0f, 1.0f,
-	     0.5f, -0.5f, 0.0f, 1.0f, 0.0f,
-	    -0.5f, -0.5f, 0.0f, 0.0f, 0.0f
+
+		// front face
+		-1.0f,  1.0f,  1.0f, 0.0f, 1.0f,
+		 1.0f, -1.0f,  1.0f, 1.0f, 0.0f,
+		 1.0f,  1.0f,  1.0f, 1.0f, 1.0f,
+		-1.0f,  1.0f,  1.0f, 0.0f, 1.0f,
+		-1.0f, -1.0f,  1.0f, 0.0f, 0.0f,
+		 1.0f, -1.0f,  1.0f, 1.0f, 0.0f,
+
+		 // back face
+		 -1.0f,  1.0f, -1.0f, 0.0f, 1.0f,
+		  1.0f, -1.0f, -1.0f, 1.0f, 0.0f,
+		  1.0f,  1.0f, -1.0f, 1.0f, 1.0f,
+		 -1.0f,  1.0f, -1.0f, 0.0f, 1.0f,
+		 -1.0f, -1.0f, -1.0f, 0.0f, 0.0f,
+		  1.0f, -1.0f, -1.0f, 1.0f, 0.0f,
+
+		  // left face
+		  -1.0f,  1.0f, -1.0f, 0.0f, 1.0f,
+		  -1.0f, -1.0f,  1.0f, 1.0f, 0.0f,
+		  -1.0f,  1.0f,  1.0f, 1.0f, 1.0f,
+		  -1.0f,  1.0f, -1.0f, 0.0f, 1.0f,
+		  -1.0f, -1.0f, -1.0f, 0.0f, 0.0f,
+		  -1.0f, -1.0f,  1.0f, 1.0f, 0.0f,
+
+		  // right face
+		   1.0f,  1.0f,  1.0f, 0.0f, 1.0f,
+		   1.0f, -1.0f, -1.0f, 1.0f, 0.0f,
+		   1.0f,  1.0f, -1.0f, 1.0f, 1.0f,
+		   1.0f,  1.0f,  1.0f, 0.0f, 1.0f,
+		   1.0f, -1.0f,  1.0f, 0.0f, 0.0f,
+		   1.0f, -1.0f, -1.0f, 1.0f, 0.0f,
+
+		   // top face
+		  -1.0f,  1.0f, -1.0f, 0.0f, 1.0f,
+		   1.0f,  1.0f,  1.0f, 1.0f, 0.0f,
+		   1.0f,  1.0f, -1.0f, 1.0f, 1.0f,
+		  -1.0f,  1.0f, -1.0f, 0.0f, 1.0f,
+		  -1.0f,  1.0f,  1.0f, 0.0f, 0.0f,
+		   1.0f,  1.0f,  1.0f, 1.0f, 0.0f,
+
+		   // bottom face
+		  -1.0f, -1.0f,  1.0f, 0.0f, 1.0f,
+		   1.0f, -1.0f, -1.0f, 1.0f, 0.0f,
+		   1.0f, -1.0f,  1.0f, 1.0f, 1.0f,
+		  -1.0f, -1.0f,  1.0f, 0.0f, 1.0f,
+		  -1.0f, -1.0f, -1.0f, 0.0f, 0.0f,
+		   1.0f, -1.0f, -1.0f, 1.0f, 0.0f
 	};
 
-	GLuint indices[] = {
-		0, 1, 2,
-		0, 2, 3
-	};
+	glm::vec3 cubePos = glm::vec3(0.0f, 0.0f, -5.f);
 
-	GLuint vbo, ibo, vao;
+	GLuint vbo, vao;
 
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
@@ -56,47 +99,63 @@ int main()
 	//tex coord
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(GLfloat), (GLfloat*)(3 * sizeof(GLfloat)));
 	glEnableVertexAttribArray(1);
-		
-	glGenBuffers(1, &ibo);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ibo);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
+	
 	ShaderProgram shaderProgram;
 	shaderProgram.LoadShaders("shaders/basic.vert", "shaders/basic.frag");
 
 	Texture2D airplaneTex;
-	airplaneTex.Load("textures/airplane.png", true);
+	airplaneTex.Load("textures/crate.jpg", true);
 
-	Texture2D crateTex;
-	crateTex.Load("textures/crate.jpg", true);
+	//Texture2D crateTex;
+	//crateTex.Load("textures/crate.jpg", true);
+
+	float cubeAngle = 0.0f;
+	double lastTime = glfwGetTime();
 
 	while (!glfwWindowShouldClose(window))
 	{
 		showFPS(window);
 
+		double currentTime = glfwGetTime();
+		double deltaTime = currentTime - lastTime;
+
 		glfwPollEvents();
 
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		airplaneTex.Bind(0);
-		crateTex.Bind(1);
-		
-		glUniform1i(glGetUniformLocation(shaderProgram.GetProgram(), "my_texture"), 0);
-		glUniform1i(glGetUniformLocation(shaderProgram.GetProgram(), "my_texture2"), 1);
+		//crateTex.Bind(1);
 
+		cubeAngle += (float)(deltaTime * 50.0f);
+		if (cubeAngle >= 360.0) cubeAngle = 0.0f;
+
+		glm::mat4 model, view, projection;
+		model = glm::translate(model, cubePos) * glm::rotate(model, glm::radians(cubeAngle), glm::vec3(0.f, 1.f, 0.f));
+
+		glm::vec3 camPos{ 0.f, 0.f, 0.f };
+		glm::vec3 targetPos{ 0.f, 0.f, -1.f };
+		glm::vec3 up{ 0.f, 1.f, 0.f };
+		view = glm::lookAt(camPos, targetPos, up);
+
+		projection = glm::perspective(glm::radians(45.f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.f);
+		
 		shaderProgram.Use();
 
+		shaderProgram.SetUniform("model", model);
+		shaderProgram.SetUniform("view", view);
+		shaderProgram.SetUniform("projection", projection);
+
 		glBindVertexArray(vao);
-		glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glBindVertexArray(0);
 
 		glfwSwapBuffers(window);
+
+		lastTime = currentTime;
 	}
-	
 	
 	glDeleteVertexArrays(1, &vao);
 	glDeleteBuffers(1, &vbo);
-	glDeleteBuffers(1, &ibo);
 
 	glfwTerminate();
 
@@ -195,6 +254,15 @@ bool initOpenGL()
 	glfwSetKeyCallback(window, glfw_onKey);
 
 	glClearColor(0.23f, 0.38f, 0.47f, 1.0f);
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	glEnable(GL_DEPTH_TEST);
 
 	return true;
+}
+
+void glfw_onFrameBufferSize(GLFWwindow* window, int width, int height)
+{
+	WINDOW_WIDTH = width;
+	WINDOW_HEIGHT = height;
+	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 }

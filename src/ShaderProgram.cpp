@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include "glm/gtc/type_ptr.hpp"
 
 ShaderProgram::ShaderProgram(): m_handle(0)
 {
@@ -121,6 +122,12 @@ void ShaderProgram::SetUniform(const GLchar* name, const glm::vec4& v)
 {
 	GLint location = GetUniformLocation(name);
 	glUniform4f(location, v.x, v.y, v.z, v.w);
+}
+
+void ShaderProgram::SetUniform(const GLchar* name, const glm::mat4& m)
+{
+	GLint location = GetUniformLocation(name);
+	glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(m));
 }
 
 GLint ShaderProgram::GetUniformLocation(const GLchar* name)
