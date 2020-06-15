@@ -8,18 +8,28 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "Texture2D.h"
+#include "Camera.h"
 
 const char* APP_TITLE = "Modern OpenGL";
-int WINDOW_WIDTH = 1024;
-int WINDOW_HEIGHT = 768;
+int windowWidth = 1024;
+int windowHeight = 768;
 bool fullscreen = false;
 bool wireframe = false;
 GLFWwindow* window = nullptr;
 
 void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode);
 void glfw_onFrameBufferSize(GLFWwindow* window, int width, int height);
+void glfw_onMouseMove(GLFWwindow* window, double posX, double posY);
+
 void showFPS(GLFWwindow* window);
 bool initOpenGL();
+
+OrbitCamera orbitCamera;
+float yaw = 0.f;
+float pitch = 0.f;
+float radius = 10.f;
+
+const float MOUSE_SENSITIVITY = 0.25f;
 
 int main()
 {
@@ -103,11 +113,11 @@ int main()
 	ShaderProgram shaderProgram;
 	shaderProgram.LoadShaders("shaders/basic.vert", "shaders/basic.frag");
 
-	Texture2D airplaneTex;
-	airplaneTex.Load("textures/crate.jpg", true);
+	Texture2D woodenCrateTex;
+	woodenCrateTex.Load("textures/wooden_crate.jpg", true);
 
-	//Texture2D crateTex;
-	//crateTex.Load("textures/crate.jpg", true);
+	Texture2D crateTex;
+	crateTex.Load("textures/grid.jpg", true);
 
 	float cubeAngle = 0.0f;
 	double lastTime = glfwGetTime();
@@ -123,21 +133,19 @@ int main()
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		airplaneTex.Bind(0);
-		//crateTex.Bind(1);
-
-		cubeAngle += (float)(deltaTime * 50.0f);
-		if (cubeAngle >= 360.0) cubeAngle = 0.0f;
-
+		woodenCrateTex.Bind(0);
+		
 		glm::mat4 model, view, projection;
-		model = glm::translate(model, cubePos) * glm::rotate(model, glm::radians(cubeAngle), glm::vec3(0.f, 1.f, 0.f));
 
-		glm::vec3 camPos{ 0.f, 0.f, 0.f };
-		glm::vec3 targetPos{ 0.f, 0.f, -1.f };
-		glm::vec3 up{ 0.f, 1.f, 0.f };
-		view = glm::lookAt(camPos, targetPos, up);
+		orbitCamera.SetLookAt(cubePos);
+		orbitCamera.Rotate(yaw, pitch);
+		orbitCamera.SetRadius(radius);
 
-		projection = glm::perspective(glm::radians(45.f), (float)WINDOW_WIDTH / (float)WINDOW_HEIGHT, 0.1f, 100.f);
+		model = glm::translate(model, cubePos);
+		
+		view = orbitCamera.GetViewMatrix();
+
+		projection = glm::perspective(glm::radians(45.f), (float)windowWidth / (float)windowHeight, 0.1f, 100.f);
 		
 		shaderProgram.Use();
 
@@ -147,6 +155,15 @@ int main()
 
 		glBindVertexArray(vao);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+		crateTex.Bind(0);
+
+		glm::vec3 floorPos;
+		floorPos.y = -1.f;
+		model = glm::translate(model, floorPos) * glm::scale(model, glm::vec3(10.f, 0.01f, 10.f));
+		shaderProgram.SetUniform("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
 		glBindVertexArray(0);
 
 		glfwSwapBuffers(window);
@@ -231,7 +248,7 @@ bool initOpenGL()
 	}
 	else
 	{
-		window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, APP_TITLE, NULL, NULL);
+		window = glfwCreateWindow(windowWidth, windowHeight, APP_TITLE, NULL, NULL);
 	}
 
 	if (!window)
@@ -252,9 +269,10 @@ bool initOpenGL()
 	}
 
 	glfwSetKeyCallback(window, glfw_onKey);
+	glfwSetCursorPosCallback(window, glfw_onMouseMove);
 
 	glClearColor(0.23f, 0.38f, 0.47f, 1.0f);
-	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	glViewport(0, 0, windowWidth, windowHeight);
 	glEnable(GL_DEPTH_TEST);
 
 	return true;
@@ -262,7 +280,28 @@ bool initOpenGL()
 
 void glfw_onFrameBufferSize(GLFWwindow* window, int width, int height)
 {
-	WINDOW_WIDTH = width;
-	WINDOW_HEIGHT = height;
-	glViewport(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
+	windowWidth = width;
+	windowHeight = height;
+	glViewport(0, 0, windowWidth, windowHeight);
+}
+
+void glfw_onMouseMove(GLFWwindow* window, double posX, double posY)
+{
+	static glm::vec2 lastMousePos = glm::vec2{ 0, 0 };
+
+	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == 1)
+	{
+		yaw -= ((float)posX - lastMousePos.x) * MOUSE_SENSITIVITY;
+		pitch += ((float)posY - lastMousePos.y) * MOUSE_SENSITIVITY;
+	}
+	
+	if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == 1)
+	{
+		float dx = 0.01f * ((float)posX - lastMousePos.x);
+		float dy = 0.01f * ((float)posY - lastMousePos.y);
+		radius += dx - dy;
+	}
+
+	lastMousePos.x = (float)posX;
+	lastMousePos.t = (float)posY;
 }
