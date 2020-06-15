@@ -12,6 +12,7 @@ public:
 
 	bool Load(const std::string &filename, bool genMipMaps = true);
 	void Bind(GLuint texunit = 0);
+	void Unbind(GLuint texunit = 0);
 
 private:
 	GLuint m_texture;

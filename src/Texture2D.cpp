@@ -69,3 +69,9 @@ void Texture2D::Bind(GLuint texunit)
 	glActiveTexture(GL_TEXTURE0 + texunit);
 	glBindTexture(GL_TEXTURE_2D, m_texture);
 }
+
+void Texture2D::Unbind(GLuint texunit)
+{
+	glActiveTexture(GL_TEXTURE0 + texunit);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
