@@ -34,6 +34,7 @@ const float MOVE_SPEED = 15.f;
 const float MOUSE_SENSITIVITY = 0.1f;
 
 float angle = 0.f;
+bool flashLightOn = true;
 
 int main()
 {
@@ -47,7 +48,10 @@ int main()
 	lightShader.LoadShaders("shaders/basic.vert", "shaders/basic.frag");
 
 	ShaderProgram lightingShader;
-	lightingShader.LoadShaders("shaders/lighting.vert", "shaders/lighting.frag");
+	//lightingShader.LoadShaders("shaders/lighting.vert", "shaders/lighting.frag");
+	//lightingShader.LoadShaders("shaders/lighting_dir.vert", "shaders/lighting_dir.frag");
+	//lightingShader.LoadShaders("shaders/lighting_point.vert", "shaders/lighting_point.frag");
+	lightingShader.LoadShaders("shaders/lighting_spot.vert", "shaders/lighting_spot.frag");
 
 	glm::vec3 modelPos[] = {
 		glm::vec3(-3.5f, 0.f,  0.f),	// crate1
@@ -55,7 +59,8 @@ int main()
 		glm::vec3( 0.0f, 0.f, -2.f),	// robot
 		glm::vec3( 0.0f, 0.f,  0.f),	// floor
 		glm::vec3( 0.0f, 0.f,  2.f),	// pin
-		glm::vec3(-2.0f, 0.f,  2.f)		// bunny
+		glm::vec3(-2.0f, 0.f,  2.f),	// bunny
+		glm::vec3(-5.0f, 0.f,  0.f)		// lamp post
 	};
 
 	glm::vec3 modelScale[] = {
@@ -64,10 +69,11 @@ int main()
 		glm::vec3( 1.0f, 1.0f,  1.0f),	// robot
 		glm::vec3(10.0f, 1.0f, 10.0f),	// floor
 		glm::vec3( 0.1f, 0.1f,  0.1f),	// pin
-		glm::vec3( 0.7f, 0.7f,  0.7f)	// bunny
+		glm::vec3( 0.7f, 0.7f,  0.7f),	// bunny
+		glm::vec3( 1.0f, 1.0f,  1.0f)	// lamp post
 	};
 
-	const int numModels = 6;
+	const int numModels = 7;
 	Mesh mesh[numModels];
 	Texture2D texture[numModels];
 
@@ -77,6 +83,7 @@ int main()
 	mesh[3].LoadOBJ("models/floor.obj");
 	mesh[4].LoadOBJ("models/bowling_pin.obj");
 	mesh[5].LoadOBJ("models/bunny.obj");
+	mesh[6].LoadOBJ("models/lampPost.obj");
 
 	texture[0].Load("textures/crate.jpg");
 	texture[1].Load("textures/woodcrate_diffuse.jpg");
@@ -84,9 +91,10 @@ int main()
 	texture[3].Load("textures/tile_floor.jpg");
 	texture[4].Load("textures/AMF.tga");
 	texture[5].Load("textures/bunny_diffuse.jpg");
+	texture[6].Load("textures/lamp_post_diffuse.png");
 
-	Mesh lightMesh;
-	lightMesh.LoadOBJ("models/light.obj");
+	//Mesh lightMesh;
+	//lightMesh.LoadOBJ("models/light.obj");
 
 	double lastTime = glfwGetTime();
 
@@ -110,11 +118,16 @@ int main()
 		glm::vec3 viewPos;
 		viewPos = fpsCamera.GetPosition();
 
-		glm::vec3 lightPos(0.0f, 1.0f, 10.0f);
+		glm::vec3 lightPos = fpsCamera.GetPosition();
 		glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+		lightPos.y -= 0.5f;
+		//glm::vec3 lightDir(0.0f, -0.9f, -0.17f);
 
-		angle += (float)deltaTime * 50.f;
-		lightPos.x = 8.f * sinf(glm::radians(angle));
+		//angle += (float)deltaTime * 50.f;		
+		//modelPos[6].x = 3.0f * sinf(glm::radians(angle));
+		//modelPos[6].z = 14.0f + 10.f * cosf(glm::radians(angle));
+		//lightPos = modelPos[6];
+		//lightPos.y += 3.8f;
 
 		lightingShader.Use();
 
@@ -126,6 +139,13 @@ int main()
 		lightingShader.SetUniform("light.diffuse", lightColor);
 		lightingShader.SetUniform("light.specular", glm::vec3(1.0f, 1.0f, 1.0f));
 		lightingShader.SetUniform("light.position", lightPos);
+		lightingShader.SetUniform("light.direction", fpsCamera.GetLook());
+		lightingShader.SetUniform("light.constant", 1.f);
+		lightingShader.SetUniform("light.linear", 0.07f);
+		lightingShader.SetUniform("light.exponent", 0.017f);
+		lightingShader.SetUniform("light.cosInnerCone", glm::cos(glm::radians(15.f)));
+		lightingShader.SetUniform("light.cosOuterCone", glm::cos(glm::radians(20.f)));
+		lightingShader.SetUniform("light.on", flashLightOn);
 
 		for (int i = 0; i < numModels; ++i)
 		{
@@ -142,13 +162,13 @@ int main()
 			texture[i].Unbind(0);
 		}
 
-		model = glm::translate(glm::mat4(), lightPos);
-		lightShader.Use();
-		lightShader.SetUniform("lightColor", lightColor);
-		lightShader.SetUniform("model", model);
-		lightShader.SetUniform("view", view);
-		lightShader.SetUniform("projection", projection);
-		lightMesh.Draw();
+		//model = glm::translate(glm::mat4(), lightPos);
+		//lightShader.Use();
+		//lightShader.SetUniform("lightColor", lightColor);
+		//lightShader.SetUniform("model", model);
+		//lightShader.SetUniform("view", view);
+		//lightShader.SetUniform("projection", projection);
+		//lightMesh.Draw();
 
 		glfwSwapBuffers(window);
 
@@ -178,6 +198,11 @@ void glfw_onKey(GLFWwindow* window, int key, int scancode, int action, int mode)
 		{
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		}
+	}
+
+	if (key == GLFW_KEY_F && action == GLFW_PRESS)
+	{
+		flashLightOn = !flashLightOn;
 	}
 }
 

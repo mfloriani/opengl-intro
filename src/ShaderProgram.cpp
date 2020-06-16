@@ -151,6 +151,12 @@ void ShaderProgram::SetUniform(const GLchar* name, const GLfloat& f)
 	glUniform1f(location, f);
 }
 
+void ShaderProgram::SetUniform(const GLchar* name, const GLint& i)
+{
+	GLint location = GetUniformLocation(name);
+	glUniform1i(location, i);
+}
+
 void ShaderProgram::SetUniformSampler(const GLchar* name, const GLint& i)
 {
 	glActiveTexture(GL_TEXTURE0 + i);

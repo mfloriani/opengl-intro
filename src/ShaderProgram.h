@@ -27,6 +27,7 @@ public:
 	void SetUniform(const GLchar* name, const glm::vec4& v);
 	void SetUniform(const GLchar* name, const glm::mat4& m);
 	void SetUniform(const GLchar* name, const GLfloat& f);
+	void SetUniform(const GLchar* name, const GLint& i);
 	void SetUniformSampler(const GLchar* name, const GLint& i);
 	
 	GLuint GetProgram() const;

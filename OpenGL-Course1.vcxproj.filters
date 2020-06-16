@@ -61,5 +61,23 @@
     <None Include="shaders\lighting.frag">
       <Filter>shaders</Filter>
     </None>
+    <None Include="shaders\lighting_dir.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\lighting_dir.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\lighting_point.frag">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\lighting_point.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\lighting_spot.vert">
+      <Filter>shaders</Filter>
+    </None>
+    <None Include="shaders\lighting_spot.frag">
+      <Filter>shaders</Filter>
+    </None>
   </ItemGroup>
 </Project>
