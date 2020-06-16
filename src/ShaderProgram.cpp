@@ -106,6 +106,21 @@ void ShaderProgram::CheckCompileErrors(GLuint handle, ShaderType type)
 	}	
 }
 
+GLint ShaderProgram::GetUniformLocation(const GLchar* name)
+{
+	std::map<std::string, GLint>::iterator it = m_uniformLocations.find(name);
+	if (it == m_uniformLocations.end())
+	{
+		m_uniformLocations[name] = glGetUniformLocation(m_handle, name);
+	}
+	return m_uniformLocations[name];
+}
+
+GLuint ShaderProgram::GetProgram() const
+{
+	return m_handle;
+}
+
 void ShaderProgram::SetUniform(const GLchar* name, const glm::vec2& v)
 {
 	GLint location = GetUniformLocation(name);
@@ -130,17 +145,15 @@ void ShaderProgram::SetUniform(const GLchar* name, const glm::mat4& m)
 	glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(m));
 }
 
-GLint ShaderProgram::GetUniformLocation(const GLchar* name)
+void ShaderProgram::SetUniform(const GLchar* name, const GLfloat& f)
 {
-	std::map<std::string, GLint>::iterator it = m_uniformLocations.find(name);
-	if (it == m_uniformLocations.end())
-	{
-		m_uniformLocations[name] = glGetUniformLocation(m_handle, name);
-	}
-	return m_uniformLocations[name];
+	GLint location = GetUniformLocation(name);
+	glUniform1f(location, f);
 }
 
-GLuint ShaderProgram::GetProgram() const
+void ShaderProgram::SetUniformSampler(const GLchar* name, const GLint& i)
 {
-	return m_handle;
+	glActiveTexture(GL_TEXTURE0 + i);
+	GLint location = GetUniformLocation(name);
+	glUniform1i(location, i);
 }

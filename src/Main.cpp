@@ -30,8 +30,10 @@ void Update(double elapsedTime);
 
 FPSCamera fpsCamera(glm::vec3(0.f, 3.f, 50.f));
 const double ZOOM_SENSITIVITY = -3.f;
-const float MOVE_SPEED = 5.f;
+const float MOVE_SPEED = 15.f;
 const float MOUSE_SENSITIVITY = 0.1f;
+
+float angle = 0.f;
 
 int main()
 {
@@ -41,24 +43,31 @@ int main()
 		return 1;
 	}
 	
-	ShaderProgram shaderProgram;
-	shaderProgram.LoadShaders("shaders/basic.vert", "shaders/basic.frag");
+	ShaderProgram lightShader;
+	lightShader.LoadShaders("shaders/basic.vert", "shaders/basic.frag");
+
+	ShaderProgram lightingShader;
+	lightingShader.LoadShaders("shaders/lighting.vert", "shaders/lighting.frag");
 
 	glm::vec3 modelPos[] = {
-		glm::vec3(-2.5f, 1.f, 0.f),
-		glm::vec3(2.5f, 1.f, 0.f),
-		glm::vec3(0.f, 0.f, -2.f),
-		glm::vec3(0.0f, 0.f, 0.f)
+		glm::vec3(-3.5f, 0.f,  0.f),	// crate1
+		glm::vec3( 3.5f, 0.f,  0.f),	// crate2
+		glm::vec3( 0.0f, 0.f, -2.f),	// robot
+		glm::vec3( 0.0f, 0.f,  0.f),	// floor
+		glm::vec3( 0.0f, 0.f,  2.f),	// pin
+		glm::vec3(-2.0f, 0.f,  2.f)		// bunny
 	};
 
 	glm::vec3 modelScale[] = {
-		glm::vec3(1.f, 1.f, 1.f),
-		glm::vec3(1.f, 1.f, 1.f),
-		glm::vec3(1.f, 1.f, 1.f),
-		glm::vec3(10.0f, 0.f, 10.f)
+		glm::vec3( 1.0f, 1.0f,  1.0f),	// crate1
+		glm::vec3( 1.0f, 1.0f,  1.0f),	// crate2
+		glm::vec3( 1.0f, 1.0f,  1.0f),	// robot
+		glm::vec3(10.0f, 1.0f, 10.0f),	// floor
+		glm::vec3( 0.1f, 0.1f,  0.1f),	// pin
+		glm::vec3( 0.7f, 0.7f,  0.7f)	// bunny
 	};
 
-	const int numModels = 4;
+	const int numModels = 6;
 	Mesh mesh[numModels];
 	Texture2D texture[numModels];
 
@@ -66,11 +75,18 @@ int main()
 	mesh[1].LoadOBJ("models/woodcrate.obj");
 	mesh[2].LoadOBJ("models/robot.obj");
 	mesh[3].LoadOBJ("models/floor.obj");
+	mesh[4].LoadOBJ("models/bowling_pin.obj");
+	mesh[5].LoadOBJ("models/bunny.obj");
 
 	texture[0].Load("textures/crate.jpg");
 	texture[1].Load("textures/woodcrate_diffuse.jpg");
 	texture[2].Load("textures/robot_diffuse.jpg");
 	texture[3].Load("textures/tile_floor.jpg");
+	texture[4].Load("textures/AMF.tga");
+	texture[5].Load("textures/bunny_diffuse.jpg");
+
+	Mesh lightMesh;
+	lightMesh.LoadOBJ("models/light.obj");
 
 	double lastTime = glfwGetTime();
 
@@ -91,20 +107,48 @@ int main()
 		view = fpsCamera.GetViewMatrix();
 		projection = glm::perspective(glm::radians(fpsCamera.GetFOV()), (float)windowWidth / (float)windowHeight, 0.1f, 100.f);
 		
-		shaderProgram.Use();
+		glm::vec3 viewPos;
+		viewPos = fpsCamera.GetPosition();
 
-		shaderProgram.SetUniform("view", view);
-		shaderProgram.SetUniform("projection", projection);
+		glm::vec3 lightPos(0.0f, 1.0f, 10.0f);
+		glm::vec3 lightColor(1.0f, 1.0f, 1.0f);
+
+		angle += (float)deltaTime * 50.f;
+		lightPos.x = 8.f * sinf(glm::radians(angle));
+
+		lightingShader.Use();
+
+		lightingShader.SetUniform("view", view);
+		lightingShader.SetUniform("projection", projection);
+		lightingShader.SetUniform("viewPos", viewPos);
+		
+		lightingShader.SetUniform("light.ambient", glm::vec3(0.2f, 0.2f, 0.2f));
+		lightingShader.SetUniform("light.diffuse", lightColor);
+		lightingShader.SetUniform("light.specular", glm::vec3(1.0f, 1.0f, 1.0f));
+		lightingShader.SetUniform("light.position", lightPos);
 
 		for (int i = 0; i < numModels; ++i)
 		{
 			model = glm::translate(glm::mat4(), modelPos[i]) * glm::scale(glm::mat4(), modelScale[i]);
-			shaderProgram.SetUniform("model", model);
+			lightingShader.SetUniform("model", model);
+
+			lightingShader.SetUniform("material.ambient", glm::vec3(0.1f, 0.1f, 0.1f));
+			lightingShader.SetUniformSampler("material.diffuseMap", 0);
+			lightingShader.SetUniform("material.specular", glm::vec3(0.5f, 0.5f, 0.5f));
+			lightingShader.SetUniform("material.shininess", 32.f);
 
 			texture[i].Bind(0);
 			mesh[i].Draw();
 			texture[i].Unbind(0);
 		}
+
+		model = glm::translate(glm::mat4(), lightPos);
+		lightShader.Use();
+		lightShader.SetUniform("lightColor", lightColor);
+		lightShader.SetUniform("model", model);
+		lightShader.SetUniform("view", view);
+		lightShader.SetUniform("projection", projection);
+		lightMesh.Draw();
 
 		glfwSwapBuffers(window);
 
