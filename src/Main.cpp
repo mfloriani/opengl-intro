@@ -28,7 +28,7 @@ void showFPS(GLFWwindow* window);
 bool initOpenGL();
 void Update(double elapsedTime);
 
-FPSCamera fpsCamera(glm::vec3(0.f, 0.f, 5.f));
+FPSCamera fpsCamera(glm::vec3(0.f, 3.f, 50.f));
 const double ZOOM_SENSITIVITY = -3.f;
 const float MOVE_SPEED = 5.f;
 const float MOUSE_SENSITIVITY = 0.1f;
